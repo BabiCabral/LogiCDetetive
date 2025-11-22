@@ -1,0 +1,18 @@
+# Build artifacts
+/build/
+*.o
+
+# Executables
+main
+
+# Editor / OS files
+.vscode/
+.DS_Store
+*~
+
+# Saves (não versionar estados de jogo locais)
+/saves/
+
+# Node/Python/other env artifacts (genéricos)
+/node_modules/
+venv/
