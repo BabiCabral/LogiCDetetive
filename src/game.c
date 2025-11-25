@@ -1,149 +1,202 @@
 #include "../include/game.h"
-#include "../include/players.h"
 #include "../include/cli_lib.h"
 #include "../include/save.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <time.h>
+
+static int historiaAtual = 1; // por enquanto só existe história 1
 
 static void limparBufferEntrada(void) {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
-static void registrarJogadores(void) {
-    char nome[128];
-    int opcao = 0;
+/* -------------------  FUNÇÃO PARA PISTAS RANDOMIZADAS  ------------------- */
 
-    cli_print("\n--- NOVO JOGO: REGISTRO ---\n");
-    while (1) {
-        if (players_count() >= 6) { // limite do enunciado por grupo
-            printf("Limite máximo de jogadores (6) atingido.\n");
-            break;
-        }
-        printf("Inserir nome do Jogador %zu: ", players_count()+1);
-        if (cli_getline(nome, sizeof(nome)) == NULL) break;
-        if (strlen(nome) == 0) { printf("Nome inválido.\n"); continue; }
-        if (!players_add(nome)) { printf("Falha ao adicionar jogador.\n"); break; }
+static void pista_random(const char *pistas[], int quantidade) {
+    int r = rand() % quantidade;
+    printf("Pista encontrada: %s\n", pistas[r]);
+}
 
-        // menu simples
-        do {
-            printf("\nOPÇÕES:\n1. Adicionar novos jogadores\n2. Iniciar jogo\nEscolha: ");
-            if (scanf("%d", &opcao) != 1) {
-                limparBufferEntrada(); opcao = 0; printf("Entrada inválida.\n");
-                continue;
-            }
-            limparBufferEntrada();
-            if (opcao == 2) return;
-            if (opcao != 1) printf("Opção inválida.\n");
-        } while (opcao != 1);
+/* -------------------  MENU DA HISTÓRIA 1  ------------------- */
+
+static void menuHistoria1() {
+    printf("\n========= LOCAIS =========\n");
+    printf("1. Prefeitura\n");
+    printf("2. Casa do Prefeito\n");
+    printf("3. Banco\n");
+    printf("4. Floricultura\n");
+    printf("5. Bar\n");
+    printf("6. Estação de Trem\n");
+    printf("7. Biblioteca\n");
+    printf("8. Teatro\n");
+    printf("S. Ver solução\n");
+    printf("X. Sair\n");
+}
+
+/* -------------------  PISTAS DA HISTÓRIA 1  ------------------- */
+
+static void salaHistoria1(int opcao) {
+
+    /* PREFEITURA */
+    const char *prefeitura[] = {
+        "As flores na sala de João ou são compradas por Madalena, ou por Lúcia.",
+        "João só vai ao bar após o trabalho quando tem reunião com Paulinho ou Lúcia à tarde.",
+        "As reuniões só acontecem durante horário de trabalho.",
+        "As flores da sala de João são azuis."
+    };
+
+    /* CASA DO PREFEITO */
+    const char *casaPrefeito[] = {
+        "Se as flores da sala de João são azuis, elas não foram compradas por Madalena.",
+        "Se João não tem reunião à tarde, ele vai com Madalena ao teatro após o trabalho.",
+        "Olívia e Madalena foram à estação de trem na sexta-feira."
+    };
+
+    /* BANCO */
+    const char *banco[] = {
+        "Às sextas-feiras, Paulinho só trabalha pela manhã.",
+        "Se o cofre foi aberto, Paulinho ou Zé Caduco estavam no banco.",
+        "Se o castiçal do banco foi emprestado a alguém, o cofre foi aberto."
+    };
+
+    /* FLORICULTURA */
+    const char *floricultura[] = {
+        "Apenas pessoas da prefeitura podem comprar substâncias venenosas na floricultura.",
+        "Se alguém da prefeitura comprou flores na sexta-feira, também comprou substância venenosa.",
+        "As flores da sala de João são sempre frescas."
+    };
+
+    /* BAR */
+    const char *bar[] = {
+        "João esteve no bar às 20h.",
+        "João nunca vai ao bar sozinho.",
+        "Uma pessoa foi vista com uma mala saindo do bar."
+    };
+
+    /* ESTAÇÃO DE TREM */
+    const char *estacao[] = {
+        "Se Jonas não estava distribuindo panfletos na estação, ele estava no evento da biblioteca.",
+        "Se alguém da família Pífio esteve na estação de trem, Jonas não distribuiu panfletos por lá.",
+        "Se a arma for o cano, o crime ocorreu na estação de trem."
+    };
+
+    /* BIBLIOTECA */
+    const char *biblioteca[] = {
+        "O castiçal do banco foi emprestado à biblioteca na sexta-feira para um evento.",
+        "Todos que participaram do evento ficaram na biblioteca até 22h.",
+        "Se o corpo possui hematoma na cabeça, a arma foi o castiçal ou o cano."
+    };
+
+    /* TEATRO */
+    const char *teatro[] = {
+        "João e Madalena não foram ao teatro na sexta-feira.",
+        "Se João saiu na sexta-feira à noite, estava acompanhado da pessoa com quem se reuniu à tarde.",
+        "O corpo não possui qualquer hematoma na cabeça."
+    };
+
+    printf("\n>>> Investigando...\n");
+
+    switch (opcao) {
+        case 1: pista_random(prefeitura, 4); break;
+        case 2: pista_random(casaPrefeito, 3); break;
+        case 3: pista_random(banco, 3); break;
+        case 4: pista_random(floricultura, 3); break;
+        case 5: pista_random(bar, 3); break;
+        case 6: pista_random(estacao, 3); break;
+        case 7: pista_random(biblioteca, 3); break;
+        case 8: pista_random(teatro, 3); break;
+        default: printf("Local inválido.\n");
     }
 }
 
-static void entrarNaSala(int opcaoSala, const char *nomeJogador) {
-    printf("\n>>> %s entrando na sala... ", nomeJogador);
-    switch (opcaoSala) {
-        case 1: printf("ESTAÇÃO DE TREM. Pista: O suspeito usava um chapéu.\n"); break;
-        case 2: printf("BANCO. Pista: Pegadas de lama no chão.\n"); break;
-        case 3: printf("BIBLIOTECA. Pista: Uma página foi rasgada.\n"); break;
-        case 4: printf("BAR. Pista: O garçom viu alguém correr.\n"); break;
-        case 5: printf("TEATRO. Pista: Um ingresso foi encontrado.\n"); break;
-        case 6: printf("PARQUE. Pista: Guarda-chuva quebrado.\n"); break;
-        default: printf("Sala desconhecida.\n"); break;
-    }
+/* -------------------  TELA INICIAL DA HISTÓRIA  ------------------- */
+
+static void escolherHistoria(void) {
+
+    historiaAtual = 1; // só existe história 1
+    printf("\n============== QUEM MATOU JOÃO PÍFIO? ==============\n");
+
+    printf(
+        " Na noite desta sexta-feira, às vésperas da festa de aniversário da\n"
+        "cidade, a primeira-dama de Logicópolis reportou às autoridades que seu\n"
+        "marido, o Prefeito João Pífio, estaria desaparecido.\n"
+        "No dia seguinte, pela manhã, seu corpo apareceu inesperadamente dentro de\n"
+        "uma mala de viagem no meio da praça central, onde a festa aconteceria. O\n"
+        "departamento investigativo de Logicópolis logo foi acionado, e levantou\n"
+        "os seguintes questionamentos:\n\n"
+        "Quem matou o prefeito?\n"
+        "Onde ocorreu o crime?\n"
+        "Que arma foi utilizada?\n\n"
+        "Os suspeitos apontados foram:\n"
+        "- Dona Madalena Pífio: Esposa de João. Além de ter sido a primeira a\n"
+        "reportar o desaparecimento, conhece sua rotina\n"
+        "como ninguém.\n\n"
+        "- Paulinho Malandro: Vice-prefeito de Logicópolis. Há rumores de que\n"
+        "João não o manteria em sua chapa no próximo mandato por\n"
+        "divergências internas.\n\n"
+        "- Zé Caduco: Grande rival político de João. Por décadas, as famílias\n"
+        "Pífio e Caduco disputam pelo “controle” da cidade.\n\n"
+        "- Lúcia Paixão: Secretária de João. Os colegas de trabalho comentam\n"
+        "que Lúcia é chamada à sala do prefeito com frequência e passa longas\n"
+        "horas lá dentro…\n\n"
+        "- Olívia Pífio:  Única filha de João. Conhecida por seu estilo de vida\n"
+        "extravagante, e, até o momento, única herdeira do patrimônio de seu\n"
+        "pai.\n\n"
+        "- Jonas Bolchevique: Líder do movimento estudantil da cidade. Há\n"
+        "tempos critica o cenário político de Logicópolis, e propõe uma revolução\n"
+        "popular.\n\n"
+        "Possíveis Locais do crime:\n\n"
+        "Prefeitura, Casa do Prefeito, Banco, Floricultura,\n"
+        "Bar, Estação de Trem, Biblioteca, Teatro.\n\n"
+        "Possíveis armas do crime:\n\n"
+        "Faca, Revólver, Castiçal, Cano, Soco Inglês, Veneno\n"
+    );
+
+    printf("=================================\n\n");
 }
+
+/* -------------------  LOOP PRINCIPAL DO JOGO  ------------------- */
 
 int game_run(void) {
+
     cli_init();
-    players_init();
+    srand(time(NULL));
 
-    // Se houver save disponível, perguntar ao usuário se quer carregar
-    if (load_game("saves/savegame.txt")) {
-        char escolha = '\0';
-        printf("Arquivo de save encontrado. Deseja carregar o último save? (s/N): ");
-        if (scanf(" %c", &escolha) == 1) {
-            limparBufferEntrada();
-            if (escolha == 's' || escolha == 'S') {
-                // já carregado por load_game acima
-                printf("Save carregado.\n");
-            } else {
-                // usuário optou por não carregar, reiniciar jogadores
-                players_free();
-                players_init();
-            }
-        } else {
-            limparBufferEntrada();
-            players_free();
-            players_init();
+    escolherHistoria();
+
+    char escolha;
+
+    while (1) {
+
+        menuHistoria1();
+
+        printf("\nEscolha: ");
+        scanf(" %c", &escolha);
+        escolha = toupper(escolha);
+        limparBufferEntrada();
+
+        if (escolha == 'X') {
+            printf("Saindo do jogo...\n");
+            break;
         }
+
+        if (escolha == 'S') {
+            printf("\n===== SOLUÇÃO DO CASO =====\n");
+            printf("Assassino: Lúcia Paixão\n");
+            printf("Local: Bar\n");
+            printf("Arma: Veneno\n");
+            printf("===========================\n");
+        } else {
+            int opcao = escolha - '0';
+            salaHistoria1(opcao);
+        }
+    
     }
 
-    // Registrar novos jogadores se não houver nenhum
-    if (players_count() == 0) {
-        registrarJogadores();
-    }
-    if (players_count() == 0) {
-        printf("Nenhum jogador registrado. Encerrando.\n");
-        players_free();
-        return 0;
-    }
-
-    printf("\nJogadores registrados:\n");
-    players_print_recursive(0); // demonstra recursividade
-
-    int jogoRolando = 1;
-    int turnoAtual = 0;
-    while (jogoRolando) {
-        size_t idx = turnoAtual % players_count();
-        const char *nome = players_get_name(idx);
-        printf("\n====================================\n");
-        printf("É a vez de: %s\n", nome);
-        printf("====================================\n");
-
-        char opcaoMenu = '\0';
-        int turnoValido = 0;
-        do {
-            printf("Aonde você quer ir investigar?\n");
-            printf("1. Estação de trem\n2. Banco\n3. Biblioteca\n4. Bar\n5. Teatro\n6. Parque\nX. SAIR do jogo\nSua escolha: ");
-            if (scanf(" %c", &opcaoMenu) != 1) { limparBufferEntrada(); printf("Entrada inválida.\n"); continue; }
-            limparBufferEntrada();
-            opcaoMenu = toupper((unsigned char)opcaoMenu);
-            if (opcaoMenu >= '1' && opcaoMenu <= '6') {
-                int sala = opcaoMenu - '0';
-                entrarNaSala(sala, nome);
-                // atribuir pontos por sala (exemplo)
-                int pontos = 0;
-                switch (sala) {
-                    case 1: pontos = 10; break;
-                    case 2: pontos = 8; break;
-                    case 3: pontos = 6; break;
-                    case 4: pontos = 5; break;
-                    case 5: pontos = 7; break;
-                    case 6: pontos = 4; break;
-                }
-                players_add_score(idx, pontos);
-                printf("%s ganhou %d pontos! Pontuação atual: %d\n", nome, pontos, players_get_score(idx));
-                turnoValido = 1;
-            } else if (opcaoMenu == 'X') {
-                printf("\n%s decidiu sair do jogo.\n", nome);
-                jogoRolando = 0; turnoValido = 1;
-            } else if (opcaoMenu == 'S') {
-                // salvar jogo
-                if (save_game("saves/savegame.txt")) {
-                    printf("Jogo salvo com sucesso em 'saves/savegame.txt'.\n");
-                } else {
-                    printf("Falha ao salvar o jogo.\n");
-                }
-                // não conta como turno completo; deixa o jogador escolher novamente
-                turnoValido = 0;
-            } else {
-                printf("Escolha inválida. Tente novamente.\n");
-            }
-        } while (!turnoValido);
-        if (jogoRolando) turnoAtual++;
-    }
-
-    players_free();
     return 0;
 }
