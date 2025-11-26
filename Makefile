@@ -1,21 +1,27 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude -g
+CFLAGS = -Wall -Wextra -std=c11 -Iinclude
 SRC = $(wildcard src/*.c)
-OBJ = $(patsubst src/%.c, build/%.o, $(SRC))
-TARGET = build/game
+OBJ = $(SRC:.c=.o)
+BIN = LogiCDetetive
+SAVES_DIR = saves
 
-all: build_dir $(TARGET)
+all: $(SAVES_DIR) $(BIN)
 
-build_dir:
-	mkdir -p build
+$(BIN): $(OBJ)
+	$(CC) $(OBJ) -o $(BIN)
 
-$(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
-
-build/%.o: src/%.c
+src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -rf build
+$(SAVES_DIR):
+	mkdir -p $(SAVES_DIR)
 
-.PHONY: all clean build_dir
+run: all
+	./$(BIN)
+
+
+clean:
+	rm -f src/*.o $(BIN)
+
+
+rebuild: clean all

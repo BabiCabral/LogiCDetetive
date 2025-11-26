@@ -1,7 +1,9 @@
 #ifndef GAME_H
 #define GAME_H
 
-// Inicializa e roda o jogo
+#include "save.h"
+
 int game_run(void);
 
-#endif // GAME_H
+#endif
+
