@@ -431,7 +431,7 @@ int game_run(void) {
     Historia *h = &historias[idx];
 
     printf("\n============== QUEM MATOU JOÃO PÍFIO? ==============\n\n");
-    printf("%s\n", h->introducao);
+    /*printf("%s\n", h->introducao);*/
 
     Jogador player;
     printf("\nDigite seu nome (ENTER para 'Jogador'): ");
