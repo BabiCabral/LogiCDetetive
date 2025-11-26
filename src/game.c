@@ -41,6 +41,9 @@ typedef struct {
     int movimentos;
 } Jogador;
 
+static const char *NOMES_JOGADORES[4] = { "RED", "GREEN", "BLUE", "YELLOW" };
+
+
 /*Jogo 1*/
 static const char *J1_prefeitura_static[] = {
     "As flores na sala de João ou são compradas por Madalena, ou por Lúcia.",
@@ -168,6 +171,7 @@ static const char *J3_teatro_static[] = {
     "Se João não foi ao teatro, então o crime não ocorreu lá."
 };
 
+
 static void limparBufferEntrada(void) {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
@@ -193,8 +197,7 @@ static Historia *inicializar_historias(int *out_qtd) {
     Historia *vec = (Historia *) malloc(sizeof(Historia) * total);
     if (!vec) { fprintf(stderr, "Erro de memória\n"); exit(1); }
 
-    /* Jogo 1 */
-    vec[0].introducao = "Jogo 1: Caso clássico. Uma rede de reuniões, flores azuis e um bar movimentado.";
+    vec[0].introducao = NULL;
     vec[0].assassino = "Lúcia Paixão";
     vec[0].local = "Bar";
     vec[0].arma  = "Veneno";
@@ -207,8 +210,7 @@ static Historia *inicializar_historias(int *out_qtd) {
     vec[0].biblioteca   = allocar_lista_pistas(J1_biblioteca_static, 3); vec[0].qtd_biblioteca = 3;
     vec[0].teatro       = allocar_lista_pistas(J1_teatro_static, 3); vec[0].qtd_teatro = 3;
 
-    /* Jogo 2 */
-    vec[1].introducao = "Jogo 2: Plano improvisado durante um evento estudantil na biblioteca.";
+    vec[1].introducao = NULL;
     vec[1].assassino = "Jonas Bolchevique";
     vec[1].local = "Biblioteca";
     vec[1].arma  = "Castiçal";
@@ -221,8 +223,7 @@ static Historia *inicializar_historias(int *out_qtd) {
     vec[1].biblioteca   = allocar_lista_pistas(J2_biblioteca_static, 3); vec[1].qtd_biblioteca = 3;
     vec[1].teatro       = allocar_lista_pistas(J2_teatro_static, 3); vec[1].qtd_teatro = 3;
 
-    /* Jogo 3 */
-    vec[2].introducao = "Jogo 3: Rastro oculto na estação de trem e contradições de horários.";
+    vec[2].introducao = NULL;
     vec[2].assassino = "Paulinho Malandro";
     vec[2].local = "Estação de Trem";
     vec[2].arma  = "Cano";
@@ -255,9 +256,11 @@ static void liberar_historias(Historia *vec, int qtd) {
 }
 
 
-static void mostrar_menu_locais() {
-    printf("\n========= LOCAIS =========\n");
-    printf("1. Prefeitura\n");
+static void mostrar_menu_locais(Jogador *j) {
+    cli_clear();
+    printf("\n========= É A VEZ DE %s =========\n", j->nome);
+    printf("Pontuação: %d pontos | Movimentos: %d\n", j->pontos, j->movimentos);
+    printf("\n1. Prefeitura\n");
     printf("2. Casa do Prefeito\n");
     printf("3. Banco\n");
     printf("4. Floricultura\n");
@@ -271,6 +274,7 @@ static void mostrar_menu_locais() {
     printf("S. Ver solução (revela)\n");
     printf("X. Sair\n");
 }
+
 
 static int investigar_local(Historia *h, int opcao, Jogador *p) {
     const char *pista = NULL;
@@ -322,11 +326,11 @@ static int fazer_acusacao(Historia *h, Jogador *p) {
     for (char *t = sol_arma; *t; ++t) *t = (char) tolower(*t);
 
     if (strcmp(suspeito, sol_ass) == 0 && strcmp(local, sol_loc) == 0 && strcmp(arma, sol_arma) == 0) {
-        printf("\nAcusação CORRETA! Você venceu.\n");
+        printf("\nAcusação CORRETA! %s acertou. (%s)\n", p->nome, p->nome);
         p->pontos += 50;
         return 1;
     } else {
-        printf("\nAcusação incorreta. -10 pontos.\n");
+        printf("\nAcusação incorreta. -10 pontos para %s.\n", p->nome);
         p->pontos -= 10;
         if (p->pontos < 0) p->pontos = 0;
         p->movimentos += 1;
@@ -342,27 +346,27 @@ static void revelar_solucao(Historia *h) {
     printf("===========================\n");
 }
 
-static void jogo_loop_rec(Historia *h, Jogador *p, int max_movimentos, int *acabou, Historia *all_hist, int qtd_hist) {
+static void jogo_loop_rec(Historia *h, Jogador jogadores[], int *jogador_atual, int max_movimentos, int *acabou, Historia *all_hist, int qtd_hist) {
     if (*acabou) return;
 
+    Jogador *p = &jogadores[*jogador_atual];
+
     if (p->movimentos >= max_movimentos) {
-        printf("\nLimite de movimentos atingido (%d). Fim do jogo.\n", max_movimentos);
+        printf("\nLimite de movimentos de %s atingido (%d). Fim do jogo para esse jogador.\n", p->nome, max_movimentos);
         revelar_solucao(h);
         *acabou = 1;
         return;
     }
 
-    printf("\nJogador: %s | Pontos: %d | Movimentos: %d/%d\n", p->nome, p->pontos, p->movimentos, max_movimentos);
-
-    mostrar_menu_locais();
+    mostrar_menu_locais(p);
     printf("\nEscolha: ");
 
-    char linha[64];
+    char linha[128];
     if (!fgets(linha, sizeof(linha), stdin)) {
-        jogo_loop_rec(h, p, max_movimentos, acabou, all_hist, qtd_hist);
+        jogo_loop_rec(h, jogadores, jogador_atual, max_movimentos, acabou, all_hist, qtd_hist);
         return;
     }
-    char opc = toupper(linha[0]);
+    char opc = toupper((unsigned char)linha[0]);
 
     if (opc == 'X') {
         printf("Saindo...\n");
@@ -375,30 +379,34 @@ static void jogo_loop_rec(Historia *h, Jogador *p, int max_movimentos, int *acab
         *acabou = 1;
         return;
     }
-    if (opc == '9') { 
+    if (opc == '9') {
         if (ranking_save("saves/ranking.txt") == 0) printf("Ranking salvo em saves/ranking.txt\n");
         else printf("Falha ao salvar ranking.\n");
-        jogo_loop_rec(h, p, max_movimentos, acabou, all_hist, qtd_hist);
+        jogo_loop_rec(h, jogadores, jogador_atual, max_movimentos, acabou, all_hist, qtd_hist);
         return;
     }
-    if (opc == 'L') { 
+    if (opc == 'L') {
         if (ranking_load("saves/ranking.txt") == 0) {
             printf("Ranking carregado. Top atual:\n");
             ranking_print_recursive(0);
         } else {
             printf("Nenhum ranking salvo encontrado.\n");
         }
-        jogo_loop_rec(h, p, max_movimentos, acabou, all_hist, qtd_hist);
+        jogo_loop_rec(h, jogadores, jogador_atual, max_movimentos, acabou, all_hist, qtd_hist);
         return;
     }
-    if (opc == '0') { 
+    if (opc == '0') {
         int ac = fazer_acusacao(h, p);
-        if (ac) {
-            printf("Pontos finais: %d\n", p->pontos);
+        if (ac == 1) {
+            printf("Pontos finais de %s: %d\n", p->nome, p->pontos);
             *acabou = 1;
             return;
+        } else if (ac == 0) {
+            *jogador_atual = (*jogador_atual + 1) % 4;
+            jogo_loop_rec(h, jogadores, jogador_atual, max_movimentos, acabou, all_hist, qtd_hist);
+            return;
         } else {
-            jogo_loop_rec(h, p, max_movimentos, acabou, all_hist, qtd_hist);
+            jogo_loop_rec(h, jogadores, jogador_atual, max_movimentos, acabou, all_hist, qtd_hist);
             return;
         }
     }
@@ -406,12 +414,13 @@ static void jogo_loop_rec(Historia *h, Jogador *p, int max_movimentos, int *acab
     int num = opc - '0';
     if (num >= 1 && num <= 8) {
         if (!investigar_local(h, num, p)) printf("Local inválido.\n");
-        jogo_loop_rec(h, p, max_movimentos, acabou, all_hist, qtd_hist);
+        *jogador_atual = (*jogador_atual + 1) % 4;
+        jogo_loop_rec(h, jogadores, jogador_atual, max_movimentos, acabou, all_hist, qtd_hist);
         return;
     }
 
     printf("Opção inválida.\n");
-    jogo_loop_rec(h, p, max_movimentos, acabou, all_hist, qtd_hist);
+    jogo_loop_rec(h, jogadores, jogador_atual, max_movimentos, acabou, all_hist, qtd_hist);
 }
 
 
@@ -430,37 +439,38 @@ int game_run(void) {
     int idx = rand() % qtd_hist;
     Historia *h = &historias[idx];
 
-    printf("\n============== QUEM MATOU JOÃO PÍFIO? ==============\n\n");
-    /*printf("%s\n", h->introducao);*/
-
-    Jogador player;
-    printf("\nDigite seu nome (ENTER para 'Jogador'): ");
-    if (!fgets(player.nome, sizeof(player.nome), stdin)) {
-        strncpy(player.nome, "Jogador", sizeof(player.nome)-1);
-        player.nome[sizeof(player.nome)-1] = '\0';
-    } else {
-        player.nome[strcspn(player.nome, "\n")] = '\0';
-        if (strlen(player.nome) == 0) strncpy(player.nome, "Jogador", sizeof(player.nome)-1);
+    Jogador jogadores[4];
+    for (int i = 0; i < 4; ++i) {
+        strncpy(jogadores[i].nome, NOMES_JOGADORES[i], sizeof(jogadores[i].nome)-1);
+        jogadores[i].nome[sizeof(jogadores[i].nome)-1] = '\0';
+        jogadores[i].pontos = 0;
+        jogadores[i].movimentos = 0;
     }
-    player.pontos = 0;
-    player.movimentos = 0;
+
+    printf("\n============== QUEM MATOU JOÃO PÍFIO? ==============\n\n");
+    printf("Iniciando investigação... (história sorteada em segredo)\n");
 
     int acabou = 0;
+    int jogador_atual = 0;
     const int max_movimentos = 20;
 
-    jogo_loop_rec(h, &player, max_movimentos, &acabou, historias, qtd_hist);
+    jogo_loop_rec(h, jogadores, &jogador_atual, max_movimentos, &acabou, historias, qtd_hist);
 
-    printf("\nFim. Pontuação final: %d | Movimentos: %d\n", player.pontos, player.movimentos);
+    printf("\n--- FIM DO JOGO ---\n");
+    for (int i = 0; i < 4; ++i) {
+        printf("%s — Pontos: %d | Movimentos: %d\n", jogadores[i].nome, jogadores[i].pontos, jogadores[i].movimentos);
+    }
 
-    if (ranking_add(player.nome, player.pontos) == 0) {
-        ranking_sort();
-        if (ranking_save("saves/ranking.txt") == 0) {
-            printf("Seu score foi salvo no ranking.\n");
-        } else {
-            printf("Erro ao salvar ranking.\n");
+    for (int i = 0; i < 4; ++i) {
+        if (ranking_add(jogadores[i].nome, jogadores[i].pontos) != 0) {
+            fprintf(stderr, "Aviso: falha ao adicionar %s ao ranking\n", jogadores[i].nome);
         }
+    }
+    ranking_sort();
+    if (ranking_save("saves/ranking.txt") == 0) {
+        printf("Ranking atualizado e salvo.\n");
     } else {
-        printf("Erro ao adicionar ao ranking.\n");
+        printf("Erro ao salvar ranking.\n");
     }
 
     printf("\n=== RANKING ATUAL ===\n");
