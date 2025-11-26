@@ -5,7 +5,7 @@ int game_run(void);
 
 int main(void) {
     cli_init();
-    printf("LogiC Game - iniciando...\n\n");
+    printf("LogiC Detetive - iniciando...\n\n");
 
     game_run();
 

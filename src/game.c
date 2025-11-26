@@ -432,7 +432,6 @@ int game_run(void) {
 
     printf("\n============== QUEM MATOU JOÃO PÍFIO? ==============\n\n");
     printf("%s\n", h->introducao);
-    printf("Uma das 3 histórias foi sorteada automaticamente.\n");
 
     Jogador player;
     printf("\nDigite seu nome (ENTER para 'Jogador'): ");
